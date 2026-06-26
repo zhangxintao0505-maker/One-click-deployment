@@ -118,3 +118,29 @@ deploy-desktop/
    - 运行：`python main.py`
    - 打包exe命令：`pyinstaller --onefile --windowed main.py`，并说明打包后如何携带 `config.json`/`services.csv`（建议放在exe同目录，程序读取exe所在目录而非临时解压目录）
 4. 示例 `config.json` 和 `services.csv`（含1-2条示例服务）
+
+---
+
+## 快速开始
+
+### 安装依赖
+```bash
+pip install -r requirements.txt
+```
+
+### 运行
+```bash
+python main.py
+```
+
+### 打包为 exe
+```bash
+pyinstaller --onefile --windowed --name DeployTool main.py
+```
+
+打包后将 `config.json` 和 `services.csv` 放在生成的 `.exe` 同目录下，程序会自动读取该目录的配置文件。
+
+### 安全提示
+- 推荐使用 SSH 私钥认证，避免在 `config.json` 中明文保存密码
+- 如使用密码认证，请注意 `config.json` 文件的访问权限
+- 私钥路径通过文件选择对话框填写，程序不会复制私钥内容

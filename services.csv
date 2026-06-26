@@ -1,0 +1,3 @@
+service_name,ssh_host,ssh_user,local_jar_path,remote_jar_dir,compose_dir,compose_service_name,remote_log_path,local_log_dir
+青山测试环境,,,D:/Gardner Project/QingShan/alloy/steel-loop-cloud/contract-parent/contract-web/target/contract-web-1.0-SNAPSHOT.jar,/data/test/jar,/data/test,contract,/data/test/logs/contract/contract-service/,D:/Gardner Project/logs
+示例服务2,,,D:\deploy\jars\service.jar,/opt/deploy/jars,/opt/deploy,service,/opt/deploy/logs,D:\deploy\logs\app2
