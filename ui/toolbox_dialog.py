@@ -26,53 +26,27 @@ COLORS = {
 
 
 class WindowTitleBar(QWidget):
-    """自定义标题栏 - iOS 风格三色键"""
+    """自定义标题栏 - Windows 按钮 + iOS 风格"""
     def __init__(self, parent=None):
         super().__init__(parent)
         self.parent_dialog = parent
         self.setFixedHeight(48)
-        self.setStyleSheet(f"background-color: {COLORS['bg']}; border-top-left-radius: 16px; border-top-right-radius: 16px;")
+        self.setStyleSheet(f"""
+            background-color: {COLORS['card']};
+            border-top-left-radius: 16px;
+            border-top-right-radius: 16px;
+        """)
         self._drag_pos = None
 
         layout = QHBoxLayout(self)
-        layout.setContentsMargins(16, 0, 16, 0)
+        layout.setContentsMargins(20, 0, 0, 0)
         layout.setSpacing(0)
-
-        # macOS 风格三色键
-        self.btn_close = QPushButton()
-        self.btn_close.setFixedSize(12, 12)
-        self.btn_close.setStyleSheet("""
-            QPushButton { background-color: #FF5F56; border: none; border-radius: 6px; }
-            QPushButton:hover { background-color: #E5493D; }
-        """)
-        self.btn_close.clicked.connect(self._on_close)
-        layout.addWidget(self.btn_close)
-
-        self.btn_minimize = QPushButton()
-        self.btn_minimize.setFixedSize(12, 12)
-        self.btn_minimize.setStyleSheet("""
-            QPushButton { background-color: #FFBD2E; border: none; border-radius: 6px; }
-            QPushButton:hover { background-color: #E0A820; }
-        """)
-        self.btn_minimize.clicked.connect(self._on_minimize)
-        layout.addWidget(self.btn_minimize)
-
-        self.btn_maximize = QPushButton()
-        self.btn_maximize.setFixedSize(12, 12)
-        self.btn_maximize.setStyleSheet("""
-            QPushButton { background-color: #27C93F; border: none; border-radius: 6px; }
-            QPushButton:hover { background-color: #1FA82E; }
-        """)
-        self.btn_maximize.clicked.connect(self._on_maximize)
-        layout.addWidget(self.btn_maximize)
-
-        layout.addSpacing(16)
 
         # 标题
         title_label = QLabel("🧰  工具箱")
         title_label.setStyleSheet(f"""
             QLabel {{
-                font-size: 14px;
+                font-size: 15px;
                 font-weight: 600;
                 color: {COLORS["title"]};
                 background: transparent;
@@ -80,6 +54,67 @@ class WindowTitleBar(QWidget):
         """)
         layout.addWidget(title_label)
         layout.addStretch()
+
+        # Windows 风格按钮（右侧）
+        btn_style_base = """
+            QPushButton {
+                border: none;
+                border-radius: 0px;
+                font-size: 10px;
+                font-weight: bold;
+            }
+        """
+
+        # 最小化按钮
+        self.btn_minimize = QPushButton("─")
+        self.btn_minimize.setFixedSize(46, 32)
+        self.btn_minimize.setStyleSheet(f"""
+            {btn_style_base}
+            QPushButton {{
+                background-color: transparent;
+                color: {COLORS["title"]};
+                border-top-right-radius: 0px;
+            }}
+            QPushButton:hover {{
+                background-color: #E5E5E5;
+            }}
+        """)
+        self.btn_minimize.clicked.connect(self._on_minimize)
+        layout.addWidget(self.btn_minimize)
+
+        # 最大化按钮
+        self.btn_maximize = QPushButton("□")
+        self.btn_maximize.setFixedSize(46, 32)
+        self.btn_maximize.setStyleSheet(f"""
+            {btn_style_base}
+            QPushButton {{
+                background-color: transparent;
+                color: {COLORS["title"]};
+            }}
+            QPushButton:hover {{
+                background-color: #E5E5E5;
+            }}
+        """)
+        self.btn_maximize.clicked.connect(self._on_maximize)
+        layout.addWidget(self.btn_maximize)
+
+        # 关闭按钮
+        self.btn_close = QPushButton("✕")
+        self.btn_close.setFixedSize(46, 32)
+        self.btn_close.setStyleSheet(f"""
+            {btn_style_base}
+            QPushButton {{
+                background-color: transparent;
+                color: {COLORS["title"]};
+                border-top-right-radius: 16px;
+            }}
+            QPushButton:hover {{
+                background-color: #E81123;
+                color: white;
+            }}
+        """)
+        self.btn_close.clicked.connect(self._on_close)
+        layout.addWidget(self.btn_close)
 
         # 窗口状态
         self._is_maximized = False
@@ -209,24 +244,37 @@ class ToolboxDialog(QDialog):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        # 无边框窗口
-        self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.Window)
-        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, False)
+        # 无边框窗口 - Windows 兼容
+        self.setWindowFlags(
+            Qt.WindowType.FramelessWindowHint |
+            Qt.WindowType.Dialog
+        )
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
         self.setWindowTitle("工具箱")
         self.setMinimumSize(1000, 650)
         self._init_ui()
 
     def _init_ui(self):
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setContentsMargins(10, 10, 10, 10)  # 留出阴影空间
         layout.setSpacing(0)
 
-        # 主容器
+        # 主容器 - 带圆角和阴影
         main_widget = QWidget()
         main_widget.setStyleSheet(f"""
             background-color: {COLORS['bg']};
             border-radius: 16px;
+            border: 1px solid {COLORS['divider']};
         """)
+
+        # 添加阴影效果
+        shadow = QGraphicsDropShadowEffect()
+        shadow.setBlurRadius(30)
+        shadow.setXOffset(0)
+        shadow.setYOffset(4)
+        shadow.setColor(QColor(0, 0, 0, 25))
+        main_widget.setGraphicsEffect(shadow)
+
         main_layout = QVBoxLayout(main_widget)
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(0)
@@ -251,6 +299,7 @@ class ToolboxDialog(QDialog):
             QWidget {{
                 background-color: {COLORS["card"]};
                 border-right: 1px solid {COLORS["divider"]};
+                border-top-left-radius: 16px;
                 border-bottom-left-radius: 16px;
             }}
         """)
@@ -329,7 +378,11 @@ class ToolboxDialog(QDialog):
         # 右侧内容区
         # ═══════════════════════════════════════════════════════════
         content_widget = QWidget()
-        content_widget.setStyleSheet(f"background-color: {COLORS['bg']}; border-bottom-right-radius: 16px;")
+        content_widget.setStyleSheet(f"""
+            background-color: {COLORS['bg']};
+            border-top-right-radius: 16px;
+            border-bottom-right-radius: 16px;
+        """)
         content_layout_right = QVBoxLayout(content_widget)
         content_layout_right.setContentsMargins(40, 36, 40, 24)
         content_layout_right.setSpacing(20)
@@ -422,15 +475,21 @@ class ToolboxDialog(QDialog):
         self._init_tools()
         self._on_nav_clicked("deploy")
 
-    def showEvent(self, event):
-        """窗口显示事件"""
-        super().showEvent(event)
-        # 圆角窗口需要启用裁剪
-        self.setStyleSheet("""
-            QDialog {
-                background-color: transparent;
-            }
-        """)
+    def paintEvent(self, event):
+        """绘制圆角背景"""
+        from PySide6.QtGui import QPainter, QBrush, QColor, QPainterPath
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+        # 绘制圆角矩形背景
+        path = QPainterPath()
+        rect = self.rect().adjusted(10, 10, -10, -10)
+        path.addRoundedRect(rect.x(), rect.y(), rect.width(), rect.height(), 16, 16)
+
+        painter.fillPath(path, QBrush(QColor(COLORS['bg'])))
+        painter.strokePath(path, QPen(QColor(COLORS['divider']), 1))
+
+        painter.end()
 
     def changeEvent(self, event):
         """窗口状态变化事件"""
@@ -438,8 +497,10 @@ class ToolboxDialog(QDialog):
         if hasattr(self, '_title_bar'):
             if self.isMaximized():
                 self._title_bar._is_maximized = True
+                self._title_bar.btn_maximize.setText("❐")
             else:
                 self._title_bar._is_maximized = False
+                self._title_bar.btn_maximize.setText("□")
 
     def _init_tools(self):
         """初始化工具数据"""
