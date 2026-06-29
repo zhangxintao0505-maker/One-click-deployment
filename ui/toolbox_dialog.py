@@ -5,7 +5,7 @@ from PySide6.QtWidgets import (
     QGridLayout, QGraphicsDropShadowEffect
 )
 from PySide6.QtCore import Qt, Signal, QPoint
-from PySide6.QtGui import QFont, QColor, QMouseEvent
+from PySide6.QtGui import QFont, QColor, QMouseEvent, QPen
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -55,46 +55,31 @@ class WindowTitleBar(QWidget):
         layout.addWidget(title_label)
         layout.addStretch()
 
-        # Windows 风格按钮（右侧）
-        btn_style_base = """
+        # 统一按钮样式
+        btn_style = """
             QPushButton {
                 border: none;
-                border-radius: 0px;
-                font-size: 10px;
-                font-weight: bold;
+                background-color: transparent;
+                color: #666666;
+                font-size: 13px;
+                font-family: "Segoe MDL2 Assets", "Segoe UI", sans-serif;
+            }
+            QPushButton:hover {
+                background-color: #E5E5E5;
             }
         """
 
         # 最小化按钮
         self.btn_minimize = QPushButton("─")
         self.btn_minimize.setFixedSize(46, 32)
-        self.btn_minimize.setStyleSheet(f"""
-            {btn_style_base}
-            QPushButton {{
-                background-color: transparent;
-                color: {COLORS["title"]};
-                border-top-right-radius: 0px;
-            }}
-            QPushButton:hover {{
-                background-color: #E5E5E5;
-            }}
-        """)
+        self.btn_minimize.setStyleSheet(btn_style)
         self.btn_minimize.clicked.connect(self._on_minimize)
         layout.addWidget(self.btn_minimize)
 
         # 最大化按钮
         self.btn_maximize = QPushButton("□")
         self.btn_maximize.setFixedSize(46, 32)
-        self.btn_maximize.setStyleSheet(f"""
-            {btn_style_base}
-            QPushButton {{
-                background-color: transparent;
-                color: {COLORS["title"]};
-            }}
-            QPushButton:hover {{
-                background-color: #E5E5E5;
-            }}
-        """)
+        self.btn_maximize.setStyleSheet(btn_style)
         self.btn_maximize.clicked.connect(self._on_maximize)
         layout.addWidget(self.btn_maximize)
 
@@ -102,10 +87,12 @@ class WindowTitleBar(QWidget):
         self.btn_close = QPushButton("✕")
         self.btn_close.setFixedSize(46, 32)
         self.btn_close.setStyleSheet(f"""
-            {btn_style_base}
             QPushButton {{
+                border: none;
                 background-color: transparent;
-                color: {COLORS["title"]};
+                color: #666666;
+                font-size: 13px;
+                font-family: "Segoe MDL2 Assets", "Segoe UI", sans-serif;
                 border-top-right-radius: 16px;
             }}
             QPushButton:hover {{
@@ -260,8 +247,8 @@ class ToolboxDialog(QDialog):
         layout.setSpacing(0)
 
         # 主容器 - 带圆角和阴影
-        main_widget = QWidget()
-        main_widget.setStyleSheet(f"""
+        self._main_widget = QWidget()
+        self._main_widget.setStyleSheet(f"""
             background-color: {COLORS['bg']};
             border-radius: 16px;
             border: 1px solid {COLORS['divider']};
@@ -273,9 +260,9 @@ class ToolboxDialog(QDialog):
         shadow.setXOffset(0)
         shadow.setYOffset(4)
         shadow.setColor(QColor(0, 0, 0, 25))
-        main_widget.setGraphicsEffect(shadow)
+        self._main_widget.setGraphicsEffect(shadow)
 
-        main_layout = QVBoxLayout(main_widget)
+        main_layout = QVBoxLayout(self._main_widget)
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(0)
 
@@ -294,9 +281,10 @@ class ToolboxDialog(QDialog):
         # 左侧导航栏
         # ═══════════════════════════════════════════════════════════
         nav_widget = QWidget()
+        nav_widget.setObjectName("nav_panel")
         nav_widget.setFixedWidth(200)
         nav_widget.setStyleSheet(f"""
-            QWidget {{
+            QWidget#nav_panel {{
                 background-color: {COLORS["card"]};
                 border-right: 1px solid {COLORS["divider"]};
                 border-top-left-radius: 16px;
@@ -324,6 +312,7 @@ class ToolboxDialog(QDialog):
             btn_container.setStyleSheet(f"""
                 QWidget#nav_{name} {{
                     background-color: transparent;
+                    border: none;
                     border-radius: 10px;
                 }}
                 QWidget#nav_{name}:hover {{
@@ -467,40 +456,45 @@ class ToolboxDialog(QDialog):
 
         main_layout.addWidget(content_container)
 
-        layout.addWidget(main_widget)
-
-        layout.addWidget(main_widget)
+        layout.addWidget(self._main_widget)
 
         # 初始化
         self._init_tools()
         self._on_nav_clicked("deploy")
 
-    def paintEvent(self, event):
-        """绘制圆角背景"""
-        from PySide6.QtGui import QPainter, QBrush, QColor, QPainterPath
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-
-        # 绘制圆角矩形背景
-        path = QPainterPath()
-        rect = self.rect().adjusted(10, 10, -10, -10)
-        path.addRoundedRect(rect.x(), rect.y(), rect.width(), rect.height(), 16, 16)
-
-        painter.fillPath(path, QBrush(QColor(COLORS['bg'])))
-        painter.strokePath(path, QPen(QColor(COLORS['divider']), 1))
-
-        painter.end()
-
     def changeEvent(self, event):
         """窗口状态变化事件"""
         super().changeEvent(event)
-        if hasattr(self, '_title_bar'):
+        if hasattr(self, '_title_bar') and hasattr(self, '_main_widget'):
             if self.isMaximized():
                 self._title_bar._is_maximized = True
                 self._title_bar.btn_maximize.setText("❐")
+                # 最大化时移除边距并设置圆角为0
+                self.layout().setContentsMargins(0, 0, 0, 0)
+                self._main_widget.setStyleSheet(f"""
+                    background-color: {COLORS['bg']};
+                    border-radius: 0px;
+                    border: none;
+                """)
+                self._title_bar.setStyleSheet(f"""
+                    background-color: {COLORS['card']};
+                    border-radius: 0px;
+                """)
             else:
                 self._title_bar._is_maximized = False
                 self._title_bar.btn_maximize.setText("□")
+                # 还原时恢复边距和圆角
+                self.layout().setContentsMargins(10, 10, 10, 10)
+                self._main_widget.setStyleSheet(f"""
+                    background-color: {COLORS['bg']};
+                    border-radius: 16px;
+                    border: 1px solid {COLORS['divider']};
+                """)
+                self._title_bar.setStyleSheet(f"""
+                    background-color: {COLORS['card']};
+                    border-top-left-radius: 16px;
+                    border-top-right-radius: 16px;
+                """)
 
     def _init_tools(self):
         """初始化工具数据"""
