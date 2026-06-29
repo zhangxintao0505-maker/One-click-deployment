@@ -522,6 +522,13 @@ class ToolboxDialog(QDialog):
             ],
             "format": [
                 {
+                    "name": "file_converter",
+                    "title": "文件格式转换",
+                    "description": "PDF、Excel、Word、Markdown 互转",
+                    "icon": "🔄",
+                    "color": "#6366f1"
+                },
+                {
                     "name": "json_formatter",
                     "title": "JSON 格式化",
                     "description": "JSON 数据格式化、压缩、验证",
@@ -580,7 +587,7 @@ class ToolboxDialog(QDialog):
             "deploy": ("部署工具", "服务器部署与管理相关工具"),
             "database": ("数据库", "数据库连接、查询与管理"),
             "network": ("网络工具", "网络检测与端口管理"),
-            "format": ("格式化", "数据格式化与编解码"),
+            "format": ("格式化", "文件格式转换与数据格式化工具"),
             "system": ("系统工具", "环境检查与进程管理"),
         }
 
@@ -654,6 +661,7 @@ class ToolboxDialog(QDialog):
         from ui.json_formatter_dialog import JsonFormatterDialog
         from ui.port_manager_dialog import PortManagerDialog
         from ui.sql_generator_dialog import SqlGeneratorDialog
+        from ui.file_converter_dialog import FileConverterDialog
 
         if tool_name == "json_formatter":
             dlg = JsonFormatterDialog(self)
@@ -663,6 +671,9 @@ class ToolboxDialog(QDialog):
             dlg.exec()
         elif tool_name == "sql_generator":
             dlg = SqlGeneratorDialog(self)
+            dlg.exec()
+        elif tool_name == "file_converter":
+            dlg = FileConverterDialog(self)
             dlg.exec()
         elif tool_name in ["upload_jar", "restart_service", "download_log", "oneclick_deploy"]:
             from ui.main_window import MainWindow
