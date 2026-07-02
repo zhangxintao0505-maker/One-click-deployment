@@ -55,49 +55,54 @@ class WindowTitleBar(QWidget):
         layout.addWidget(title_label)
         layout.addStretch()
 
-        # 按钮样式
-        btn_style = """
+        # 最小化按钮
+        self.btn_minimize = QPushButton("─")
+        self.btn_minimize.setFixedSize(46, 32)
+        self.btn_minimize.setStyleSheet("""
             QPushButton {
                 border: none;
                 background-color: transparent;
-                color: #666666;
-                font-size: 10px;
-                font-family: "Segoe MDL2 Assets", "Segoe UI", sans-serif;
+                color: #333;
+                font-size: 12px;
             }
             QPushButton:hover {
                 background-color: #E5E5E5;
             }
-        """
-
-        # 最小化
-        self.btn_minimize = QPushButton("─")
-        self.btn_minimize.setFixedSize(46, 32)
-        self.btn_minimize.setStyleSheet(btn_style)
+        """)
         self.btn_minimize.clicked.connect(self._on_minimize)
         layout.addWidget(self.btn_minimize)
 
-        # 最大化
+        # 最大化按钮
         self.btn_maximize = QPushButton("□")
         self.btn_maximize.setFixedSize(46, 32)
-        self.btn_maximize.setStyleSheet(btn_style)
+        self.btn_maximize.setStyleSheet("""
+            QPushButton {
+                border: none;
+                background-color: transparent;
+                color: #333;
+                font-size: 12px;
+            }
+            QPushButton:hover {
+                background-color: #E5E5E5;
+            }
+        """)
         self.btn_maximize.clicked.connect(self._on_maximize)
         layout.addWidget(self.btn_maximize)
 
-        # 关闭
+        # 关闭按钮
         self.btn_close = QPushButton("✕")
         self.btn_close.setFixedSize(46, 32)
-        self.btn_close.setStyleSheet(f"""
-            QPushButton {{
+        self.btn_close.setStyleSheet("""
+            QPushButton {
                 border: none;
                 background-color: transparent;
-                color: #666666;
-                font-size: 10px;
-                font-family: "Segoe MDL2 Assets", "Segoe UI", sans-serif;
-            }}
-            QPushButton:hover {{
+                color: #333;
+                font-size: 12px;
+            }
+            QPushButton:hover {
                 background-color: #E81123;
                 color: white;
-            }}
+            }
         """)
         self.btn_close.clicked.connect(self._on_close)
         layout.addWidget(self.btn_close)
