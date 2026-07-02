@@ -1,9 +1,10 @@
+"""主窗口 - iOS 极简风 + Claude 暖色调"""
 import datetime
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QListWidget,
     QTextEdit, QPushButton, QCheckBox, QLabel, QGroupBox, QSplitter,
     QStatusBar, QMessageBox, QListWidgetItem, QLineEdit, QFormLayout,
-    QFileDialog, QScrollArea
+    QFileDialog, QScrollArea, QGraphicsDropShadowEffect
 )
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QFont, QColor, QAction
@@ -12,17 +13,98 @@ from config_manager import load_config, save_config, load_services, save_service
 from ssh_worker import UploadWorker, RestartWorker, DownloadWorker
 from ui.settings_dialog import SettingsDialog
 from ui.services_dialog import ServicesDialog
-from ui.json_formatter_dialog import JsonFormatterDialog
-from ui.port_manager_dialog import PortManagerDialog
-from ui.sql_generator_dialog import SqlGeneratorDialog
-from ui.toolbox_dialog import ToolboxDialog
+
+
+# ═══════════════════════════════════════════════════════════════
+# iOS 风格配色
+# ═══════════════════════════════════════════════════════════════
+COLORS = {
+    "bg": "#FBF9F6",
+    "card": "#FFFFFF",
+    "card_border": "#EBE7E0",
+    "title": "#222220",
+    "desc": "#8C867E",
+    "accent": "#0099ff",
+    "divider": "#EBE7E0",
+}
+
+# 通用样式
+INPUT_STYLE = f"""
+    QLineEdit, QTextEdit {{
+        border: 1px solid {COLORS["card_border"]};
+        border-radius: 10px;
+        padding: 10px 14px;
+        font-size: 14px;
+        background-color: {COLORS["card"]};
+        color: {COLORS["title"]};
+        selection-background-color: {COLORS["accent"]}40;
+    }}
+    QLineEdit:focus, QTextEdit:focus {{
+        border-color: {COLORS["accent"]};
+    }}
+"""
+
+LABEL_STYLE = f"""
+    color: {COLORS["desc"]};
+    font-size: 13px;
+    border: none;
+    background: transparent;
+"""
+
+TITLE_STYLE = f"""
+    font-size: 15px;
+    font-weight: 600;
+    color: {COLORS["title"]};
+    border: none;
+    background: transparent;
+"""
+
+CARD_STYLE = f"""
+    QWidget {{
+        background-color: {COLORS["card"]};
+        border: 1px solid {COLORS["card_border"]};
+        border-radius: 16px;
+    }}
+"""
+
+BTN_PRIMARY = f"""
+    QPushButton {{
+        background-color: {COLORS["accent"]};
+        color: white;
+        border: none;
+        border-radius: 10px;
+        padding: 10px 20px;
+        font-weight: 600;
+        font-size: 14px;
+    }}
+    QPushButton:hover {{
+        background-color: #0080e6;
+    }}
+    QPushButton:disabled {{
+        background-color: #ccc;
+    }}
+"""
+
+BTN_SECONDARY = f"""
+    QPushButton {{
+        background-color: {COLORS["card"]};
+        color: {COLORS["title"]};
+        border: 1px solid {COLORS["card_border"]};
+        border-radius: 10px;
+        padding: 10px 16px;
+        font-size: 13px;
+    }}
+    QPushButton:hover {{
+        background-color: #F5F3F0;
+    }}
+"""
 
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("一键部署工具")
-        self.setMinimumSize(1000, 650)
+        self.setMinimumSize(1050, 680)
 
         self.config = load_config()
         self.services = load_services()
@@ -36,612 +118,406 @@ class MainWindow(QMainWindow):
 
     def _init_ui(self):
         central = QWidget()
+        central.setStyleSheet(f"background-color: {COLORS['bg']};")
         self.setCentralWidget(central)
         main_layout = QHBoxLayout(central)
-        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setContentsMargins(16, 16, 16, 16)
+        main_layout.setSpacing(16)
 
-        splitter = QSplitter(Qt.Horizontal)
-        main_layout.addWidget(splitter)
-
+        # ═══════════════════════════════════════════════════════════
         # 左侧服务列表
+        # ═══════════════════════════════════════════════════════════
         left = QWidget()
-        left.setStyleSheet("""
-            QWidget {
-                background-color: #f8f9fa;
-                border-right: 1px solid #e9ecef;
-            }
+        left.setObjectName("left_panel")
+        left.setStyleSheet(f"""
+            QWidget#left_panel {{
+                background-color: {COLORS["card"]};
+                border: 1px solid {COLORS["card_border"]};
+                border-radius: 16px;
+            }}
         """)
         left_layout = QVBoxLayout(left)
-        left_layout.setContentsMargins(12, 16, 12, 12)
+        left_layout.setContentsMargins(16, 20, 16, 16)
+        left_layout.setSpacing(12)
 
+        # 标题
         left_header = QHBoxLayout()
         left_label = QLabel("服务环境列表")
-        left_label.setStyleSheet("""
-            font-weight: bold;
-            font-size: 14px;
-            color: #333;
-            padding: 8px 0;
-        """)
+        left_label.setStyleSheet(TITLE_STYLE)
         left_header.addWidget(left_label)
 
         self.add_service_btn = QPushButton("+")
         self.add_service_btn.setFixedSize(28, 28)
-        self.add_service_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #0099ff;
+        self.add_service_btn.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {COLORS["accent"]};
                 color: white;
                 border: none;
-                border-radius: 4px;
+                border-radius: 8px;
                 font-weight: bold;
                 font-size: 16px;
-            }
-            QPushButton:hover {
+            }}
+            QPushButton:hover {{
                 background-color: #0080e6;
-            }
+            }}
         """)
         self.add_service_btn.clicked.connect(self._add_service)
         left_header.addWidget(self.add_service_btn)
         left_header.addStretch()
         left_layout.addLayout(left_header)
 
+        # 服务列表
         self.service_list = QListWidget()
-        self.service_list.setStyleSheet("""
-            QListWidget {
-                border: 1px solid #dee2e6;
-                border-radius: 6px;
-                background-color: white;
-                padding: 4px;
-            }
-            QListWidget::item {
-                padding: 10px 12px;
+        self.service_list.setStyleSheet(f"""
+            QListWidget {{
+                border: none;
+                background-color: transparent;
+                padding: 0;
+            }}
+            QListWidget::item {{
+                padding: 12px;
                 margin: 4px 0;
-                border-radius: 4px;
-            }
-            QListWidget::item:selected {
-                background-color: #e3f2fd;
-                border-left: 3px solid #0099ff;
-            }
-            QListWidget::item:hover {
-                background-color: #f5f5f5;
-            }
+                border-radius: 10px;
+                border: none;
+                background-color: transparent;
+            }}
+            QListWidget::item:selected {{
+                background-color: {COLORS["accent"]}15;
+                color: {COLORS["accent"]};
+            }}
+            QListWidget::item:hover {{
+                background-color: #F5F3F0;
+            }}
         """)
         self.service_list.currentRowChanged.connect(self._on_service_selected)
         left_layout.addWidget(self.service_list)
 
         # 全局设置按钮
-        self.global_settings_btn = QPushButton("⚙ 全局设置")
-        self.global_settings_btn.setStyleSheet("""
-            QPushButton {
-                background-color: white;
-                color: #666;
-                border: 1px solid #dee2e6;
-                border-radius: 6px;
-                padding: 10px;
+        self.global_settings_btn = QPushButton("⚙  全局设置")
+        self.global_settings_btn.setStyleSheet(f"""
+            QPushButton {{
+                background-color: transparent;
+                color: {COLORS["desc"]};
+                border: 1px solid {COLORS["card_border"]};
+                border-radius: 10px;
+                padding: 12px;
                 text-align: left;
-            }
-            QPushButton:hover {
-                background-color: #f5f5f5;
-                border-color: #0099ff;
-            }
+                font-size: 13px;
+            }}
+            QPushButton:hover {{
+                background-color: #F5F3F0;
+                color: {COLORS["title"]};
+            }}
         """)
         self.global_settings_btn.clicked.connect(self._open_settings)
         left_layout.addWidget(self.global_settings_btn)
 
-        splitter.addWidget(left)
+        main_layout.addWidget(left, 1)
 
+        # ═══════════════════════════════════════════════════════════
         # 右侧面板
+        # ═══════════════════════════════════════════════════════════
         right = QWidget()
-        right.setStyleSheet("background-color: white;")
+        right.setStyleSheet(f"background: transparent;")
         right_layout = QVBoxLayout(right)
-        right_layout.setContentsMargins(24, 20, 24, 20)
-        right_layout.setSpacing(20)
+        right_layout.setContentsMargins(0, 0, 0, 0)
+        right_layout.setSpacing(16)
 
-        # 服务详情配置区
-        detail_container = QWidget()
-        detail_container.setStyleSheet("""
-            QWidget {
-                background-color: white;
-            }
+        # 服务详情卡片
+        detail_card = QWidget()
+        detail_card.setObjectName("detail_card")
+        detail_card.setStyleSheet(f"""
+            QWidget#detail_card {{
+                background-color: {COLORS["card"]};
+                border: 1px solid {COLORS["card_border"]};
+                border-radius: 16px;
+            }}
         """)
-        detail_outer_layout = QVBoxLayout(detail_container)
-        detail_outer_layout.setContentsMargins(0, 0, 0, 0)
+        detail_layout = QVBoxLayout(detail_card)
+        detail_layout.setContentsMargins(24, 24, 24, 24)
+        detail_layout.setSpacing(20)
 
-        # 服务器与网络属性标题
-        detail_title = QLabel("服务器与网络属性")
-        detail_title.setStyleSheet("""
-            font-weight: bold;
-            font-size: 13px;
-            color: #333;
+        # 服务器与网络属性
+        section1_title = QLabel("服务器与网络属性")
+        section1_title.setStyleSheet(f"""
+            font-size: 15px;
+            font-weight: 600;
+            color: {COLORS["title"]};
             padding-left: 12px;
-            border-left: 3px solid #0099ff;
-            margin-bottom: 12px;
+            border-left: 3px solid {COLORS["accent"]};
         """)
-        detail_outer_layout.addWidget(detail_title)
+        detail_layout.addWidget(section1_title)
 
-        # 服务器字段
-        server_grid = QWidget()
-        server_grid_layout = QHBoxLayout(server_grid)
-        server_grid_layout.setContentsMargins(0, 0, 0, 0)
-        server_grid_layout.setSpacing(20)
+        # 服务名称、SSH主机、用户名
+        row1 = QHBoxLayout()
+        row1.setSpacing(16)
 
-        # 服务名称
-        svc_name_group = QWidget()
-        svc_name_layout = QVBoxLayout(svc_name_group)
-        svc_name_layout.setContentsMargins(0, 0, 0, 0)
-        svc_name_layout.setSpacing(4)
-        svc_name_label = QLabel("服务名称")
-        svc_name_label.setStyleSheet("color: #666; font-size: 12px;")
-        svc_name_layout.addWidget(svc_name_label)
         self.detail_fields = {}
-        svc_name_edit = QLineEdit()
-        svc_name_edit.setPlaceholderText("请输入服务名称")
-        svc_name_edit.setStyleSheet("""
-            QLineEdit {
-                border: 1px solid #dee2e6;
-                border-radius: 4px;
-                padding: 8px 12px;
-                font-size: 13px;
-            }
-            QLineEdit:focus {
-                border-color: #0099ff;
-            }
-        """)
-        svc_name_layout.addWidget(svc_name_edit)
-        self.detail_fields["service_name"] = svc_name_edit
-        server_grid_layout.addWidget(svc_name_group, 1)
 
-        # SSH主机IP
-        ssh_host_group = QWidget()
-        ssh_host_layout = QVBoxLayout(ssh_host_group)
-        ssh_host_layout.setContentsMargins(0, 0, 0, 0)
-        ssh_host_layout.setSpacing(4)
-        ssh_host_label = QLabel("SSH主机IP")
-        ssh_host_label.setStyleSheet("color: #666; font-size: 12px;")
-        ssh_host_layout.addWidget(ssh_host_label)
-        ssh_host_edit = QLineEdit()
-        ssh_host_edit.setPlaceholderText("默认全局IP")
-        ssh_host_edit.setStyleSheet("""
-            QLineEdit {
-                border: 1px solid #dee2e6;
-                border-radius: 4px;
-                padding: 8px 12px;
-                font-size: 13px;
-            }
-            QLineEdit:focus {
-                border-color: #0099ff;
-            }
-        """)
-        ssh_host_layout.addWidget(ssh_host_edit)
-        self.detail_fields["ssh_host"] = ssh_host_edit
-        server_grid_layout.addWidget(ssh_host_group, 1)
+        for label_text, field_key, placeholder in [
+            ("服务名称", "service_name", "请输入服务名称"),
+            ("SSH 主机 IP", "ssh_host", "默认全局IP"),
+            ("SSH 登录用户名", "ssh_user", "默认全局用户"),
+        ]:
+            field_widget = QWidget()
+            field_layout = QVBoxLayout(field_widget)
+            field_layout.setContentsMargins(0, 0, 0, 0)
+            field_layout.setSpacing(6)
 
-        # SSH登录用户名
-        ssh_user_group = QWidget()
-        ssh_user_layout = QVBoxLayout(ssh_user_group)
-        ssh_user_layout.setContentsMargins(0, 0, 0, 0)
-        ssh_user_layout.setSpacing(4)
-        ssh_user_label = QLabel("SSH登录用户名")
-        ssh_user_label.setStyleSheet("color: #666; font-size: 12px;")
-        ssh_user_layout.addWidget(ssh_user_label)
-        ssh_user_edit = QLineEdit()
-        ssh_user_edit.setPlaceholderText("默认全局用户")
-        ssh_user_edit.setStyleSheet("""
-            QLineEdit {
-                border: 1px solid #dee2e6;
-                border-radius: 4px;
-                padding: 8px 12px;
-                font-size: 13px;
-            }
-            QLineEdit:focus {
-                border-color: #0099ff;
-            }
-        """)
-        ssh_user_layout.addWidget(ssh_user_edit)
-        self.detail_fields["ssh_host"] = ssh_host_edit
-        self.detail_fields["ssh_user"] = ssh_user_edit
-        server_grid_layout.addWidget(ssh_user_group, 1)
+            label = QLabel(label_text)
+            label.setStyleSheet(LABEL_STYLE)
+            field_layout.addWidget(label)
 
-        detail_outer_layout.addWidget(server_grid)
+            edit = QLineEdit()
+            edit.setPlaceholderText(placeholder)
+            edit.setStyleSheet(INPUT_STYLE)
+            field_layout.addWidget(edit)
+            self.detail_fields[field_key] = edit
 
-        # 部署制品与容器设定标题
-        deploy_title = QLabel("部署制品与容器设定")
-        deploy_title.setStyleSheet("""
-            font-weight: bold;
-            font-size: 13px;
-            color: #333;
+            row1.addWidget(field_widget)
+
+        detail_layout.addLayout(row1)
+
+        # 部署制品与容器设定
+        section2_title = QLabel("部署制品与容器设定")
+        section2_title.setStyleSheet(f"""
+            font-size: 15px;
+            font-weight: 600;
+            color: {COLORS["title"]};
             padding-left: 12px;
-            border-left: 3px solid #0099ff;
-            margin-top: 20px;
-            margin-bottom: 12px;
+            border-left: 3px solid {COLORS["accent"]};
+            margin-top: 8px;
         """)
-        detail_outer_layout.addWidget(deploy_title)
+        detail_layout.addWidget(section2_title)
 
-        # 部署字段第一行
-        deploy_row1 = QWidget()
-        deploy_row1_layout = QHBoxLayout(deploy_row1)
-        deploy_row1_layout.setContentsMargins(0, 0, 0, 0)
-        deploy_row1_layout.setSpacing(20)
+        # 本地Jar路径 + 服务器路径
+        row2 = QHBoxLayout()
+        row2.setSpacing(16)
 
         # 本地Jar路径
-        local_jar_group = QWidget()
-        local_jar_layout = QVBoxLayout(local_jar_group)
-        local_jar_layout.setContentsMargins(0, 0, 0, 0)
-        local_jar_layout.setSpacing(4)
-        local_jar_label = QLabel("本地制品包 (Jar) 路径")
-        local_jar_label.setStyleSheet("color: #666; font-size: 12px;")
-        local_jar_layout.addWidget(local_jar_label)
-        local_jar_row = QHBoxLayout()
+        jar_widget = QWidget()
+        jar_layout = QVBoxLayout(jar_widget)
+        jar_layout.setContentsMargins(0, 0, 0, 0)
+        jar_layout.setSpacing(6)
+
+        jar_label = QLabel("本地制品包 (Jar) 路径")
+        jar_label.setStyleSheet(LABEL_STYLE)
+        jar_layout.addWidget(jar_label)
+
+        jar_row = QHBoxLayout()
+        jar_row.setSpacing(8)
         local_jar_edit = QLineEdit()
         local_jar_edit.setPlaceholderText("浏览或输入路径")
-        local_jar_edit.setStyleSheet("""
-            QLineEdit {
-                border: 1px solid #dee2e6;
-                border-radius: 4px;
-                padding: 8px 12px;
-                font-size: 13px;
-            }
-            QLineEdit:focus {
-                border-color: #0099ff;
-            }
-        """)
-        local_jar_row.addWidget(local_jar_edit)
-        local_jar_browse = QPushButton("浏览...")
-        local_jar_browse.setFixedWidth(70)
-        local_jar_browse.setStyleSheet("""
-            QPushButton {
-                background-color: #f8f9fa;
-                border: 1px solid #dee2e6;
-                border-radius: 4px;
-                padding: 8px 12px;
-                font-size: 13px;
-            }
-            QPushButton:hover {
-                background-color: #e9ecef;
-            }
-        """)
-        local_jar_browse.clicked.connect(lambda checked, k="local_jar_path", e=local_jar_edit: self._browse_field(k, e))
-        local_jar_row.addWidget(local_jar_browse)
-        local_jar_layout.addLayout(local_jar_row)
+        local_jar_edit.setStyleSheet(INPUT_STYLE)
+        jar_row.addWidget(local_jar_edit)
         self.detail_fields["local_jar_path"] = local_jar_edit
-        deploy_row1_layout.addWidget(local_jar_group, 2)
 
-        # 服务器存储Jar绝对路径
-        remote_jar_group = QWidget()
-        remote_jar_layout = QVBoxLayout(remote_jar_group)
-        remote_jar_layout.setContentsMargins(0, 0, 0, 0)
-        remote_jar_layout.setSpacing(4)
-        remote_jar_label = QLabel("服务器存储 Jar 绝对路径")
-        remote_jar_label.setStyleSheet("color: #666; font-size: 12px;")
-        remote_jar_layout.addWidget(remote_jar_label)
-        remote_jar_edit = QLineEdit()
-        remote_jar_edit.setPlaceholderText("/data/jar")
-        remote_jar_edit.setStyleSheet("""
-            QLineEdit {
-                border: 1px solid #dee2e6;
-                border-radius: 4px;
-                padding: 8px 12px;
-                font-size: 13px;
-            }
-            QLineEdit:focus {
-                border-color: #0099ff;
-            }
-        """)
-        remote_jar_layout.addWidget(remote_jar_edit)
-        self.detail_fields["remote_jar_dir"] = remote_jar_edit
-        deploy_row1_layout.addWidget(remote_jar_group, 1)
+        jar_browse = QPushButton("浏览...")
+        jar_browse.setFixedWidth(70)
+        jar_browse.setStyleSheet(BTN_SECONDARY)
+        jar_browse.clicked.connect(lambda: self._browse_field("local_jar_path", local_jar_edit))
+        jar_row.addWidget(jar_browse)
+        jar_layout.addLayout(jar_row)
 
-        detail_outer_layout.addWidget(deploy_row1)
+        row2.addWidget(jar_widget, 2)
 
-        # 部署字段第二行
-        deploy_row2 = QWidget()
-        deploy_row2_layout = QHBoxLayout(deploy_row2)
-        deploy_row2_layout.setContentsMargins(0, 0, 0, 0)
-        deploy_row2_layout.setSpacing(20)
+        # 服务器路径
+        remote_widget = QWidget()
+        remote_layout = QVBoxLayout(remote_widget)
+        remote_layout.setContentsMargins(0, 0, 0, 0)
+        remote_layout.setSpacing(6)
 
-        # Docker Compose运行目录
-        compose_dir_group = QWidget()
-        compose_dir_layout = QVBoxLayout(compose_dir_group)
-        compose_dir_layout.setContentsMargins(0, 0, 0, 0)
-        compose_dir_layout.setSpacing(4)
-        compose_dir_label = QLabel("Docker Compose 运行目录")
-        compose_dir_label.setStyleSheet("color: #666; font-size: 12px;")
-        compose_dir_layout.addWidget(compose_dir_label)
-        compose_dir_edit = QLineEdit()
-        compose_dir_edit.setPlaceholderText("/data/app")
-        compose_dir_edit.setStyleSheet("""
-            QLineEdit {
-                border: 1px solid #dee2e6;
-                border-radius: 4px;
-                padding: 8px 12px;
-                font-size: 13px;
-            }
-            QLineEdit:focus {
-                border-color: #0099ff;
-            }
-        """)
-        compose_dir_layout.addWidget(compose_dir_edit)
-        self.detail_fields["compose_dir"] = compose_dir_edit
-        deploy_row2_layout.addWidget(compose_dir_group, 1)
+        remote_label = QLabel("服务器存储 Jar 绝对路径")
+        remote_label.setStyleSheet(LABEL_STYLE)
+        remote_layout.addWidget(remote_label)
 
-        # Docker Compose服务标识
-        compose_svc_group = QWidget()
-        compose_svc_layout = QVBoxLayout(compose_svc_group)
-        compose_svc_layout.setContentsMargins(0, 0, 0, 0)
-        compose_svc_layout.setSpacing(4)
-        compose_svc_label = QLabel("Docker Compose 服务标识 (Service Name)")
-        compose_svc_label.setStyleSheet("color: #666; font-size: 12px;")
-        compose_svc_layout.addWidget(compose_svc_label)
-        compose_svc_edit = QLineEdit()
-        compose_svc_edit.setPlaceholderText("例如: contract")
-        compose_svc_edit.setStyleSheet("""
-            QLineEdit {
-                border: 1px solid #dee2e6;
-                border-radius: 4px;
-                padding: 8px 12px;
-                font-size: 13px;
-            }
-            QLineEdit:focus {
-                border-color: #0099ff;
-            }
-        """)
-        compose_svc_layout.addWidget(compose_svc_edit)
-        self.detail_fields["compose_service_name"] = compose_svc_edit
-        deploy_row2_layout.addWidget(compose_svc_group, 1)
+        remote_edit = QLineEdit()
+        remote_edit.setPlaceholderText("/data/jar")
+        remote_edit.setStyleSheet(INPUT_STYLE)
+        remote_layout.addWidget(remote_edit)
+        self.detail_fields["remote_jar_dir"] = remote_edit
 
-        detail_outer_layout.addWidget(deploy_row2)
+        row2.addWidget(remote_widget, 1)
+        detail_layout.addLayout(row2)
 
-        # 运行日志回传与备份配置标题
-        log_config_title = QLabel("运行日志回传与备份配置")
-        log_config_title.setStyleSheet("""
-            font-weight: bold;
-            font-size: 13px;
-            color: #333;
-            padding-left: 12px;
-            border-left: 3px solid #0099ff;
-            margin-top: 20px;
-            margin-bottom: 12px;
-        """)
-        detail_outer_layout.addWidget(log_config_title)
+        # Docker Compose 配置
+        row3 = QHBoxLayout()
+        row3.setSpacing(16)
 
-        # 日志配置行
-        log_config_row = QWidget()
-        log_config_row_layout = QHBoxLayout(log_config_row)
-        log_config_row_layout.setContentsMargins(0, 0, 0, 0)
-        log_config_row_layout.setSpacing(20)
+        for label_text, field_key, placeholder in [
+            ("Docker Compose 运行目录", "compose_dir", "/data/app"),
+            ("Docker Compose 服务标识", "compose_service_name", "例如: contract"),
+        ]:
+            field_widget = QWidget()
+            field_layout = QVBoxLayout(field_widget)
+            field_layout.setContentsMargins(0, 0, 0, 0)
+            field_layout.setSpacing(6)
 
-        # 服务端容器日志路径
-        remote_log_group = QWidget()
-        remote_log_layout = QVBoxLayout(remote_log_group)
-        remote_log_layout.setContentsMargins(0, 0, 0, 0)
-        remote_log_layout.setSpacing(4)
-        remote_log_label = QLabel("服务端容器日志路径 (Remote Path)")
-        remote_log_label.setStyleSheet("color: #666; font-size: 12px;")
-        remote_log_layout.addWidget(remote_log_label)
-        remote_log_edit = QLineEdit()
-        remote_log_edit.setPlaceholderText("/data/logs/")
-        remote_log_edit.setStyleSheet("""
-            QLineEdit {
-                border: 1px solid #dee2e6;
-                border-radius: 4px;
-                padding: 8px 12px;
-                font-size: 13px;
-            }
-            QLineEdit:focus {
-                border-color: #0099ff;
-            }
-        """)
-        remote_log_layout.addWidget(remote_log_edit)
-        self.detail_fields["remote_log_path"] = remote_log_edit
-        log_config_row_layout.addWidget(remote_log_group, 1)
+            label = QLabel(label_text)
+            label.setStyleSheet(LABEL_STYLE)
+            field_layout.addWidget(label)
 
-        # 本地备份日志保存目录
-        local_log_group = QWidget()
-        local_log_layout = QVBoxLayout(local_log_group)
-        local_log_layout.setContentsMargins(0, 0, 0, 0)
-        local_log_layout.setSpacing(4)
-        local_log_label = QLabel("本地备份日志保存目录 (Local Backup Path)")
-        local_log_label.setStyleSheet("color: #666; font-size: 12px;")
-        local_log_layout.addWidget(local_log_label)
-        local_log_row = QHBoxLayout()
-        local_log_edit = QLineEdit()
-        local_log_edit.setPlaceholderText("浏览或输入路径")
-        local_log_edit.setStyleSheet("""
-            QLineEdit {
-                border: 1px solid #dee2e6;
-                border-radius: 4px;
-                padding: 8px 12px;
-                font-size: 13px;
-            }
-            QLineEdit:focus {
-                border-color: #0099ff;
-            }
-        """)
-        local_log_row.addWidget(local_log_edit)
-        local_log_browse = QPushButton("浏览...")
-        local_log_browse.setFixedWidth(70)
-        local_log_browse.setStyleSheet("""
-            QPushButton {
-                background-color: #f8f9fa;
-                border: 1px solid #dee2e6;
-                border-radius: 4px;
-                padding: 8px 12px;
-                font-size: 13px;
-            }
-            QPushButton:hover {
-                background-color: #e9ecef;
-            }
-        """)
-        local_log_browse.clicked.connect(lambda checked, k="local_log_dir", e=local_log_edit: self._browse_field(k, e))
-        local_log_row.addWidget(local_log_browse)
-        local_log_layout.addLayout(local_log_row)
-        self.detail_fields["local_log_dir"] = local_log_edit
-        log_config_row_layout.addWidget(local_log_group, 2)
+            edit = QLineEdit()
+            edit.setPlaceholderText(placeholder)
+            edit.setStyleSheet(INPUT_STYLE)
+            field_layout.addWidget(edit)
+            self.detail_fields[field_key] = edit
 
-        detail_outer_layout.addWidget(log_config_row)
+            row3.addWidget(field_widget)
+
+        detail_layout.addLayout(row3)
 
         # 保存按钮
-        save_btn_row = QHBoxLayout()
-        save_btn_row.addStretch()
+        save_row = QHBoxLayout()
+        save_row.addStretch()
         save_detail_btn = QPushButton("保存配置修改")
-        save_detail_btn.setStyleSheet("""
-            QPushButton {
-                background-color: white;
-                border: 1px solid #dee2e6;
-                border-radius: 6px;
-                padding: 10px 20px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #f5f5f5;
-                border-color: #0099ff;
-            }
+        save_detail_btn.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {COLORS["card"]};
+                color: {COLORS["title"]};
+                border: 1px solid {COLORS["card_border"]};
+                border-radius: 10px;
+                padding: 10px 24px;
+                font-weight: 600;
+            }}
+            QPushButton:hover {{
+                background-color: #F5F3F0;
+            }}
         """)
         save_detail_btn.clicked.connect(self._save_detail)
-        save_btn_row.addWidget(save_detail_btn)
-        detail_outer_layout.addLayout(save_btn_row)
+        save_row.addWidget(save_detail_btn)
+        detail_layout.addLayout(save_row)
 
-        right_layout.addWidget(detail_container, 3)
+        right_layout.addWidget(detail_card)
 
+        # ═══════════════════════════════════════════════════════════
         # 操作按钮区
-        ops_container = QWidget()
-        ops_container.setStyleSheet("""
-            QWidget {
-                background-color: white;
-                border-top: 1px solid #e9ecef;
-            }
+        # ═══════════════════════════════════════════════════════════
+        ops_card = QWidget()
+        ops_card.setObjectName("ops_card")
+        ops_card.setStyleSheet(f"""
+            QWidget#ops_card {{
+                background-color: {COLORS["card"]};
+                border: 1px solid {COLORS["card_border"]};
+                border-radius: 16px;
+            }}
         """)
-        ops_layout = QHBoxLayout(ops_container)
-        ops_layout.setContentsMargins(0, 16, 0, 16)
+        ops_layout = QHBoxLayout(ops_card)
+        ops_layout.setContentsMargins(20, 16, 20, 16)
         ops_layout.setSpacing(12)
 
         self.upload_btn = QPushButton("↑ 上传 Jar 包")
-        self.upload_btn.setStyleSheet("""
-            QPushButton {
-                background-color: white;
-                border: 1px solid #dee2e6;
-                border-radius: 6px;
-                padding: 12px 20px;
-                font-weight: 500;
-            }
-            QPushButton:hover {
-                background-color: #f5f5f5;
-                border-color: #0099ff;
-            }
-        """)
+        self.upload_btn.setStyleSheet(BTN_SECONDARY)
         self.upload_btn.clicked.connect(self._do_upload)
         ops_layout.addWidget(self.upload_btn)
 
-        self.restart_btn = QPushButton("⟳ 重启 Compose 容器")
-        self.restart_btn.setStyleSheet("""
-            QPushButton {
-                background-color: white;
-                border: 1px solid #dee2e6;
-                border-radius: 6px;
-                padding: 12px 20px;
-                font-weight: 500;
-            }
-            QPushButton:hover {
-                background-color: #f5f5f5;
-                border-color: #0099ff;
-            }
-        """)
+        self.restart_btn = QPushButton("⟳ 重启容器")
+        self.restart_btn.setStyleSheet(BTN_SECONDARY)
         self.restart_btn.clicked.connect(self._do_restart)
         ops_layout.addWidget(self.restart_btn)
 
-        self.download_btn = QPushButton("↓ 下载远程日志")
-        self.download_btn.setStyleSheet("""
-            QPushButton {
-                background-color: white;
-                border: 1px solid #dee2e6;
-                border-radius: 6px;
-                padding: 12px 20px;
-                font-weight: 500;
-            }
-            QPushButton:hover {
-                background-color: #f5f5f5;
-                border-color: #0099ff;
-            }
-        """)
+        self.download_btn = QPushButton("↓ 下载日志")
+        self.download_btn.setStyleSheet(BTN_SECONDARY)
         self.download_btn.clicked.connect(self._do_download)
         ops_layout.addWidget(self.download_btn)
 
         self.archive_cb = QCheckBox("时间戳备份归档")
-        self.archive_cb.setStyleSheet("font-weight: 500; padding: 0 8px;")
+        self.archive_cb.setStyleSheet(f"""
+            QCheckBox {{
+                color: {COLORS["desc"]};
+                font-size: 13px;
+                spacing: 8px;
+            }}
+            QCheckBox::indicator {{
+                width: 18px;
+                height: 18px;
+                border-radius: 4px;
+                border: 1px solid {COLORS["card_border"]};
+                background-color: {COLORS["card"]};
+            }}
+            QCheckBox::indicator:checked {{
+                background-color: {COLORS["accent"]};
+                border-color: {COLORS["accent"]};
+            }}
+        """)
         ops_layout.addWidget(self.archive_cb)
 
         ops_layout.addStretch()
 
-        self.oneclick_btn = QPushButton("⚙ 一键全部部署")
-        self.oneclick_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #0099ff;
+        self.oneclick_btn = QPushButton("⚡ 一键全部部署")
+        self.oneclick_btn.setStyleSheet(f"""
+            QPushButton {{
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                    stop:0 {COLORS["accent"]}, stop:1 #7C4DFF);
                 color: white;
                 border: none;
-                border-radius: 6px;
-                padding: 12px 24px;
+                border-radius: 10px;
+                padding: 12px 28px;
                 font-weight: bold;
-                font-size: 14px;
-            }
-            QPushButton:hover {
-                background-color: #0080e6;
-            }
-            QPushButton:disabled {
-                background-color: #ccc;
-            }
+                font-size: 15px;
+            }}
+            QPushButton:hover {{
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                    stop:0 #0080e6, stop:1 #6a3de8);
+            }}
         """)
         self.oneclick_btn.clicked.connect(self._do_oneclick)
         ops_layout.addWidget(self.oneclick_btn)
 
-        right_layout.addWidget(ops_container)
+        right_layout.addWidget(ops_card)
 
+        # ═══════════════════════════════════════════════════════════
         # 日志区
-        log_container = QWidget()
-        log_container.setStyleSheet("""
-            QWidget {
-                background-color: white;
-            }
+        # ═══════════════════════════════════════════════════════════
+        log_card = QWidget()
+        log_card.setObjectName("log_card")
+        log_card.setStyleSheet(f"""
+            QWidget#log_card {{
+                background-color: #1e1e2e;
+                border-radius: 16px;
+            }}
         """)
-        log_layout = QVBoxLayout(log_container)
+        log_layout = QVBoxLayout(log_card)
         log_layout.setContentsMargins(0, 0, 0, 0)
+        log_layout.setSpacing(0)
 
         log_header = QWidget()
         log_header.setStyleSheet("""
-            QWidget {
-                background-color: #2d3748;
-                border-radius: 8px 8px 0 0;
-            }
+            background-color: #2d2d3f;
+            border-top-left-radius: 16px;
+            border-top-right-radius: 16px;
         """)
         log_header_layout = QHBoxLayout(log_header)
-        log_header_layout.setContentsMargins(16, 12, 16, 12)
+        log_header_layout.setContentsMargins(20, 12, 20, 12)
 
-        log_title = QLabel("▶_ Deployment Log Shell")
+        log_title = QLabel("▶_ Deployment Log")
         log_title.setStyleSheet("""
             color: #00ff88;
             font-family: Consolas, monospace;
             font-size: 13px;
             font-weight: bold;
+            border: none;
+            background: transparent;
         """)
         log_header_layout.addWidget(log_title)
-
         log_header_layout.addStretch()
 
         clear_btn = QPushButton("清空屏幕")
         clear_btn.setStyleSheet("""
             QPushButton {
-                background-color: #4a5568;
-                color: #e2e8f0;
+                background-color: transparent;
+                color: #888;
                 border: none;
                 border-radius: 4px;
-                padding: 6px 12px;
+                padding: 4px 8px;
                 font-size: 12px;
             }
             QPushButton:hover {
-                background-color: #5a6577;
+                color: white;
             }
         """)
         clear_btn.clicked.connect(lambda: self.log_text.clear())
         log_header_layout.addWidget(clear_btn)
-
         log_layout.addWidget(log_header)
 
         self.log_text = QTextEdit()
@@ -649,33 +525,61 @@ class MainWindow(QMainWindow):
         self.log_text.setFont(QFont("Consolas", 10))
         self.log_text.setStyleSheet("""
             QTextEdit {
-                background-color: #1e1e1e;
+                background-color: #1e1e2e;
                 color: #d4d4d4;
                 border: none;
-                border-radius: 0 0 8px 8px;
-                padding: 12px;
+                border-bottom-left-radius: 16px;
+                border-bottom-right-radius: 16px;
+                padding: 16px;
             }
         """)
         log_layout.addWidget(self.log_text)
 
-        right_layout.addWidget(log_container, 2)
+        right_layout.addWidget(log_card, 1)
 
-        splitter.addWidget(right)
-        splitter.setSizes([280, 720])
+        main_layout.addWidget(right, 3)
 
         # 状态栏
-        self.statusBar().setStyleSheet("""
-            QStatusBar {
-                background-color: #f8f9fa;
-                border-top: 1px solid #e9ecef;
+        self.statusBar().setStyleSheet(f"""
+            QStatusBar {{
+                background-color: {COLORS["bg"]};
+                border: none;
                 padding: 4px 12px;
-                color: #666;
-            }
+                color: {COLORS["desc"]};
+            }}
         """)
         self.statusBar().showMessage("就绪")
 
     def _init_menu(self):
         menu_bar = self.menuBar()
+        menu_bar.setStyleSheet(f"""
+            QMenuBar {{
+                background-color: {COLORS["bg"]};
+                border: none;
+                padding: 4px 0;
+                color: {COLORS["title"]};
+            }}
+            QMenuBar::item {{
+                padding: 8px 16px;
+                border-radius: 8px;
+            }}
+            QMenuBar::item:selected {{
+                background-color: #F5F3F0;
+            }}
+            QMenu {{
+                background-color: {COLORS["card"]};
+                border: 1px solid {COLORS["card_border"]};
+                border-radius: 10px;
+                padding: 8px;
+            }}
+            QMenu::item {{
+                padding: 8px 24px;
+                border-radius: 6px;
+            }}
+            QMenu::item:selected {{
+                background-color: #F5F3F0;
+            }}
+        """)
 
         file_menu = menu_bar.addMenu("文件")
         settings_action = QAction("设置", self)
@@ -704,22 +608,20 @@ class MainWindow(QMainWindow):
         # 工具菜单
         tools_menu = menu_bar.addMenu("工具")
 
-        toolbox_action = QAction("🧰 工具箱", self)
-        toolbox_action.triggered.connect(self._open_toolbox)
-        tools_menu.addAction(toolbox_action)
-
-        tools_menu.addSeparator()
+        from ui.json_formatter_dialog import JsonFormatterDialog
+        from ui.port_manager_dialog import PortManagerDialog
+        from ui.sql_generator_dialog import SqlGeneratorDialog
 
         json_formatter_action = QAction("JSON 格式化", self)
-        json_formatter_action.triggered.connect(self._open_json_formatter)
+        json_formatter_action.triggered.connect(lambda: JsonFormatterDialog(self).exec())
         tools_menu.addAction(json_formatter_action)
 
         port_manager_action = QAction("端口管理", self)
-        port_manager_action.triggered.connect(self._open_port_manager)
+        port_manager_action.triggered.connect(lambda: PortManagerDialog(self).exec())
         tools_menu.addAction(port_manager_action)
 
         sql_generator_action = QAction("SQL 生成器", self)
-        sql_generator_action.triggered.connect(self._open_sql_generator)
+        sql_generator_action.triggered.connect(lambda: SqlGeneratorDialog(self).exec())
         tools_menu.addAction(sql_generator_action)
 
     def _add_service(self):
@@ -972,23 +874,3 @@ class MainWindow(QMainWindow):
         for h in self.history:
             lines.append(f"[{h['time']}] {h['service']} - {h['action']} - {h['result']}")
         QMessageBox.information(self, "操作历史", "\n".join(lines))
-
-    def _open_json_formatter(self):
-        """打开 JSON 格式化工具"""
-        dlg = JsonFormatterDialog(self)
-        dlg.exec()
-
-    def _open_port_manager(self):
-        """打开端口管理工具"""
-        dlg = PortManagerDialog(self)
-        dlg.exec()
-
-    def _open_sql_generator(self):
-        """打开 SQL 生成器"""
-        dlg = SqlGeneratorDialog(self)
-        dlg.exec()
-
-    def _open_toolbox(self):
-        """打开工具箱"""
-        dlg = ToolboxDialog(self)
-        dlg.exec()

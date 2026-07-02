@@ -4,24 +4,24 @@ from PySide6.QtWidgets import (
     QPushButton, QScrollArea, QWidget, QFrame,
     QGridLayout, QGraphicsDropShadowEffect
 )
-from PySide6.QtCore import Qt, Signal, QPoint
-from PySide6.QtGui import QFont, QColor, QMouseEvent, QPen
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QFont, QColor, QMouseEvent
 
 
 # ═══════════════════════════════════════════════════════════════
 # 配色方案
 # ═══════════════════════════════════════════════════════════════
 COLORS = {
-    "bg": "#FBF9F6",           # 主背景 - 暖白/纸张色
-    "card": "#FFFFFF",         # 卡片背景 - 纯白
-    "card_border": "#EBE7E0",  # 卡片边框 - 极浅暖灰
-    "title": "#222220",        # 标题文字 - 深炭黑
-    "desc": "#8C867E",         # 描述文字 - 中灰
-    "nav_active": "#222220",   # 导航选中
-    "nav_inactive": "#8C867E", # 导航未选中
-    "nav_hover": "#F5F3F0",    # 导航悬停
-    "divider": "#EBE7E0",      # 分割线
-    "icon": "#222220",         # 图标颜色 - 深炭黑
+    "bg": "#FBF9F6",
+    "card": "#FFFFFF",
+    "card_border": "#EBE7E0",
+    "title": "#222220",
+    "desc": "#8C867E",
+    "nav_active": "#222220",
+    "nav_inactive": "#8C867E",
+    "nav_hover": "#F5F3F0",
+    "divider": "#EBE7E0",
+    "icon": "#222220",
 }
 
 
@@ -42,7 +42,6 @@ class WindowTitleBar(QWidget):
         layout.setContentsMargins(20, 0, 0, 0)
         layout.setSpacing(0)
 
-        # 标题
         title_label = QLabel("🧰  工具箱")
         title_label.setStyleSheet(f"""
             QLabel {{
@@ -55,7 +54,6 @@ class WindowTitleBar(QWidget):
         layout.addWidget(title_label)
         layout.addStretch()
 
-        # 统一按钮样式
         btn_style = """
             QPushButton {
                 border: none;
@@ -69,21 +67,18 @@ class WindowTitleBar(QWidget):
             }
         """
 
-        # 最小化按钮
         self.btn_minimize = QPushButton("─")
         self.btn_minimize.setFixedSize(46, 32)
         self.btn_minimize.setStyleSheet(btn_style)
         self.btn_minimize.clicked.connect(self._on_minimize)
         layout.addWidget(self.btn_minimize)
 
-        # 最大化按钮
         self.btn_maximize = QPushButton("□")
         self.btn_maximize.setFixedSize(46, 32)
         self.btn_maximize.setStyleSheet(btn_style)
         self.btn_maximize.clicked.connect(self._on_maximize)
         layout.addWidget(self.btn_maximize)
 
-        # 关闭按钮
         self.btn_close = QPushButton("✕")
         self.btn_close.setFixedSize(46, 32)
         self.btn_close.setStyleSheet(f"""
@@ -103,7 +98,6 @@ class WindowTitleBar(QWidget):
         self.btn_close.clicked.connect(self._on_close)
         layout.addWidget(self.btn_close)
 
-        # 窗口状态
         self._is_maximized = False
 
     def _on_close(self):
@@ -151,7 +145,9 @@ class ToolCard(QFrame):
         self._init_ui()
 
     def _init_ui(self):
-        self.setFixedSize(280, 160)
+        # 卡片不设置固定大小，由网格布局控制
+        self.setMinimumWidth(260)
+        self.setMaximumHeight(180)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setStyleSheet(f"""
             ToolCard {{
@@ -165,7 +161,6 @@ class ToolCard(QFrame):
             }}
         """)
 
-        # 阴影效果
         shadow = QGraphicsDropShadowEffect()
         shadow.setBlurRadius(24)
         shadow.setXOffset(0)
@@ -177,7 +172,6 @@ class ToolCard(QFrame):
         layout.setContentsMargins(24, 24, 24, 24)
         layout.setSpacing(12)
 
-        # 图标 - 简洁文字图标，无背景色块
         icon_label = QLabel(self.icon_text)
         icon_label.setFixedSize(32, 32)
         icon_label.setStyleSheet(f"""
@@ -190,7 +184,6 @@ class ToolCard(QFrame):
         """)
         layout.addWidget(icon_label)
 
-        # 标题
         title = QLabel(self._title)
         title.setStyleSheet(f"""
             QLabel {{
@@ -199,12 +192,10 @@ class ToolCard(QFrame):
                 color: {COLORS["title"]};
                 border: none;
                 background: transparent;
-                letter-spacing: 0.2px;
             }}
         """)
         layout.addWidget(title)
 
-        # 描述
         desc = QLabel(self._description)
         desc.setWordWrap(True)
         desc.setStyleSheet(f"""
@@ -213,7 +204,6 @@ class ToolCard(QFrame):
                 color: {COLORS["desc"]};
                 border: none;
                 background: transparent;
-                line-height: 1.5;
             }}
         """)
         layout.addWidget(desc)
@@ -227,75 +217,68 @@ class ToolCard(QFrame):
 
 
 class ToolboxDialog(QDialog):
-    """工具箱对话框 - iOS 极简风 + Claude 暖色调"""
+    """工具箱对话框 - 响应式布局"""
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        # 无边框窗口 - Windows 兼容
         self.setWindowFlags(
             Qt.WindowType.FramelessWindowHint |
             Qt.WindowType.Dialog
         )
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
         self.setWindowTitle("工具箱")
-        self.setMinimumSize(1000, 650)
+        self.setMinimumSize(900, 580)
+        self.resize(1050, 680)
+        self._is_maximized = False
         self._init_ui()
 
     def _init_ui(self):
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(10, 10, 10, 10)  # 留出阴影空间
-        layout.setSpacing(0)
+        # 外层布局 - 用于居中显示带阴影的窗口
+        outer_layout = QVBoxLayout(self)
+        outer_layout.setContentsMargins(10, 10, 10, 10)
+        outer_layout.setSpacing(0)
 
-        # 主容器 - 带圆角和阴影
-        self._main_widget = QWidget()
-        self._main_widget.setStyleSheet(f"""
-            background-color: {COLORS['bg']};
-            border-radius: 16px;
-            border: 1px solid {COLORS['divider']};
-        """)
+        # 主容器
+        self._main_container = QWidget()
+        self._main_container.setObjectName("main_container")
+        self._update_container_style()
+        main_layout = QVBoxLayout(self._main_container)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(0)
 
-        # 添加阴影效果
+        # 阴影
         shadow = QGraphicsDropShadowEffect()
         shadow.setBlurRadius(30)
         shadow.setXOffset(0)
         shadow.setYOffset(4)
         shadow.setColor(QColor(0, 0, 0, 25))
-        self._main_widget.setGraphicsEffect(shadow)
+        self._main_container.setGraphicsEffect(shadow)
 
-        main_layout = QVBoxLayout(self._main_widget)
-        main_layout.setContentsMargins(0, 0, 0, 0)
-        main_layout.setSpacing(0)
-
-        # 自定义标题栏
+        # 标题栏
         self._title_bar = WindowTitleBar(self)
         main_layout.addWidget(self._title_bar)
 
-        # 内容区域
-        content_container = QWidget()
-        content_container.setStyleSheet("background: transparent;")
-        content_layout = QHBoxLayout(content_container)
+        # 内容区域 - 使用水平布局
+        content_layout = QHBoxLayout()
         content_layout.setContentsMargins(0, 0, 0, 0)
         content_layout.setSpacing(0)
 
         # ═══════════════════════════════════════════════════════════
         # 左侧导航栏
         # ═══════════════════════════════════════════════════════════
-        nav_widget = QWidget()
-        nav_widget.setObjectName("nav_panel")
-        nav_widget.setFixedWidth(200)
-        nav_widget.setStyleSheet(f"""
+        self._nav_widget = QWidget()
+        self._nav_widget.setObjectName("nav_panel")
+        self._nav_widget.setFixedWidth(200)
+        self._nav_widget.setStyleSheet(f"""
             QWidget#nav_panel {{
                 background-color: {COLORS["card"]};
                 border-right: 1px solid {COLORS["divider"]};
-                border-top-left-radius: 16px;
-                border-bottom-left-radius: 16px;
             }}
         """)
-        nav_layout = QVBoxLayout(nav_widget)
-        nav_layout.setContentsMargins(16, 24, 16, 24)
+        nav_layout = QVBoxLayout(self._nav_widget)
+        nav_layout.setContentsMargins(12, 20, 12, 20)
         nav_layout.setSpacing(4)
 
-        # 导航项
         nav_items = [
             ("deploy", "🚀", "部署工具"),
             ("database", "🗄️", "数据库"),
@@ -347,7 +330,6 @@ class ToolboxDialog(QDialog):
 
         nav_layout.addStretch()
 
-        # 版本
         version_label = QLabel("v1.0.0")
         version_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         version_label.setStyleSheet(f"""
@@ -361,66 +343,28 @@ class ToolboxDialog(QDialog):
         """)
         nav_layout.addWidget(version_label)
 
-        content_layout.addWidget(nav_widget)
+        content_layout.addWidget(self._nav_widget)
 
         # ═══════════════════════════════════════════════════════════
-        # 右侧内容区
+        # 右侧内容区 - 自适应宽度
         # ═══════════════════════════════════════════════════════════
-        content_widget = QWidget()
-        content_widget.setStyleSheet(f"""
-            background-color: {COLORS['bg']};
-            border-top-right-radius: 16px;
-            border-bottom-right-radius: 16px;
-        """)
-        content_layout_right = QVBoxLayout(content_widget)
-        content_layout_right.setContentsMargins(40, 36, 40, 24)
-        content_layout_right.setSpacing(20)
-
-        # 标题区域
-        header_widget = QWidget()
-        header_widget.setStyleSheet("background: transparent;")
-        header_layout = QVBoxLayout(header_widget)
-        header_layout.setContentsMargins(0, 0, 0, 0)
-        header_layout.setSpacing(6)
-
-        self.section_title = QLabel("部署工具")
-        self.section_title.setStyleSheet(f"""
-            QLabel {{
-                font-size: 26px;
-                font-weight: 600;
-                color: {COLORS["title"]};
+        right_container = QWidget()
+        right_container.setObjectName("right_container")
+        right_container.setStyleSheet(f"""
+            QWidget#right_container {{
+                background-color: {COLORS['bg']};
                 border: none;
-                background: transparent;
             }}
         """)
-        header_layout.addWidget(self.section_title)
+        right_layout = QVBoxLayout(right_container)
+        right_layout.setContentsMargins(0, 0, 0, 0)
+        right_layout.setSpacing(0)
 
-        self.section_desc = QLabel("服务器部署与管理相关工具")
-        self.section_desc.setStyleSheet(f"""
-            QLabel {{
-                font-size: 14px;
-                color: {COLORS["desc"]};
-                border: none;
-                background: transparent;
-            }}
-        """)
-        header_layout.addWidget(self.section_desc)
-
-        content_layout_right.addWidget(header_widget)
-
-        # 极淡分割线
-        divider = QWidget()
-        divider.setFixedHeight(1)
-        divider.setStyleSheet(f"""
-            background-color: {COLORS["divider"]};
-            border: none;
-        """)
-        content_layout_right.addWidget(divider)
-
-        # 工具卡片区域（滚动）
+        # 内容滚动区
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
         scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         scroll_area.setStyleSheet(f"""
             QScrollArea {{
                 border: none;
@@ -429,6 +373,7 @@ class ToolboxDialog(QDialog):
             QScrollBar:vertical {{
                 width: 6px;
                 background: transparent;
+                margin: 0;
             }}
             QScrollBar::handle:vertical {{
                 background: #D4CFC7;
@@ -441,60 +386,123 @@ class ToolboxDialog(QDialog):
             QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
                 height: 0px;
             }}
+            QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{
+                background: none;
+            }}
         """)
 
-        self.cards_container = QWidget()
-        self.cards_container.setStyleSheet("background: transparent;")
-        self.cards_layout = QGridLayout(self.cards_container)
-        self.cards_layout.setSpacing(20)
-        self.cards_layout.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
+        scroll_content = QWidget()
+        scroll_content.setStyleSheet("background: transparent;")
+        scroll_layout = QVBoxLayout(scroll_content)
+        scroll_layout.setContentsMargins(40, 32, 40, 32)
+        scroll_layout.setSpacing(0)
 
-        scroll_area.setWidget(self.cards_container)
-        content_layout_right.addWidget(scroll_area)
+        # 标题区
+        self.section_title = QLabel("部署工具")
+        self.section_title.setStyleSheet(f"""
+            QLabel {{
+                font-size: 26px;
+                font-weight: 600;
+                color: {COLORS["title"]};
+                border: none;
+                background: transparent;
+            }}
+        """)
+        scroll_layout.addWidget(self.section_title)
 
-        content_layout.addWidget(content_widget)
+        scroll_layout.addSpacing(6)
 
-        main_layout.addWidget(content_container)
+        self.section_desc = QLabel("服务器部署与管理相关工具")
+        self.section_desc.setStyleSheet(f"""
+            QLabel {{
+                font-size: 14px;
+                color: {COLORS["desc"]};
+                border: none;
+                background: transparent;
+            }}
+        """)
+        scroll_layout.addWidget(self.section_desc)
 
-        layout.addWidget(self._main_widget)
+        scroll_layout.addSpacing(20)
+
+        # 分割线 - 使用容器确保 100% 宽度
+        divider_container = QWidget()
+        divider_container.setFixedHeight(1)
+        divider_container.setStyleSheet(f"""
+            background-color: {COLORS["divider"]};
+        """)
+        scroll_layout.addWidget(divider_container)
+
+        scroll_layout.addSpacing(24)
+
+        # 卡片网格容器
+        self._cards_container = QWidget()
+        self._cards_container.setStyleSheet("background: transparent;")
+        self._cards_layout = QGridLayout(self._cards_container)
+        self._cards_layout.setSpacing(20)
+        self._cards_layout.setContentsMargins(0, 0, 0, 0)
+
+        scroll_layout.addWidget(self._cards_container)
+        scroll_layout.addStretch()
+
+        scroll_area.setWidget(scroll_content)
+        right_layout.addWidget(scroll_area)
+
+        content_layout.addWidget(right_container, 1)  # flex: 1
+
+        main_layout.addLayout(content_layout)
+
+        outer_layout.addWidget(self._main_container)
 
         # 初始化
         self._init_tools()
         self._on_nav_clicked("deploy")
 
+    def _update_container_style(self):
+        """更新容器样式 - 无边框设计"""
+        if self._is_maximized:
+            self._main_container.setStyleSheet(f"""
+                background-color: {COLORS['bg']};
+                border-radius: 0px;
+            """)
+        else:
+            self._main_container.setStyleSheet(f"""
+                background-color: {COLORS['bg']};
+                border-radius: 16px;
+            """)
+
+    def _update_title_bar_style(self):
+        """更新标题栏样式"""
+        if self._is_maximized:
+            self._title_bar.setStyleSheet(f"""
+                background-color: {COLORS['card']};
+                border-radius: 0px;
+            """)
+        else:
+            self._title_bar.setStyleSheet(f"""
+                background-color: {COLORS['card']};
+                border-top-left-radius: 16px;
+                border-top-right-radius: 16px;
+            """)
+
     def changeEvent(self, event):
         """窗口状态变化事件"""
         super().changeEvent(event)
-        if hasattr(self, '_title_bar') and hasattr(self, '_main_widget'):
-            if self.isMaximized():
-                self._title_bar._is_maximized = True
-                self._title_bar.btn_maximize.setText("❐")
-                # 最大化时移除边距并设置圆角为0
-                self.layout().setContentsMargins(0, 0, 0, 0)
-                self._main_widget.setStyleSheet(f"""
-                    background-color: {COLORS['bg']};
-                    border-radius: 0px;
-                    border: none;
-                """)
-                self._title_bar.setStyleSheet(f"""
-                    background-color: {COLORS['card']};
-                    border-radius: 0px;
-                """)
-            else:
-                self._title_bar._is_maximized = False
-                self._title_bar.btn_maximize.setText("□")
-                # 还原时恢复边距和圆角
-                self.layout().setContentsMargins(10, 10, 10, 10)
-                self._main_widget.setStyleSheet(f"""
-                    background-color: {COLORS['bg']};
-                    border-radius: 16px;
-                    border: 1px solid {COLORS['divider']};
-                """)
-                self._title_bar.setStyleSheet(f"""
-                    background-color: {COLORS['card']};
-                    border-top-left-radius: 16px;
-                    border-top-right-radius: 16px;
-                """)
+        if event.type() == event.Type.WindowStateChange:
+            if hasattr(self, '_title_bar') and hasattr(self, '_main_container'):
+                self._is_maximized = self.isMaximized()
+
+                if self._is_maximized:
+                    self._title_bar._is_maximized = True
+                    self._title_bar.btn_maximize.setText("❐")
+                    self.layout().setContentsMargins(0, 0, 0, 0)
+                else:
+                    self._title_bar._is_maximized = False
+                    self._title_bar.btn_maximize.setText("□")
+                    self.layout().setContentsMargins(10, 10, 10, 10)
+
+                self._update_container_style()
+                self._update_title_bar_style()
 
     def _init_tools(self):
         """初始化工具数据"""
@@ -541,7 +549,6 @@ class ToolboxDialog(QDialog):
 
     def _on_nav_clicked(self, category):
         """导航点击"""
-        # 更新导航状态
         for name, btn_data in self.nav_buttons.items():
             is_selected = name == category
             container = btn_data["container"]
@@ -550,6 +557,7 @@ class ToolboxDialog(QDialog):
             container.setStyleSheet(f"""
                 QWidget#nav_{name} {{
                     background-color: {'#F5F3F0' if is_selected else 'transparent'};
+                    border: none;
                     border-radius: 10px;
                 }}
                 QWidget#nav_{name}:hover {{
@@ -567,25 +575,25 @@ class ToolboxDialog(QDialog):
                 }}
             """)
 
-        # 更新标题
         title, desc = self.category_meta.get(category, ("工具", ""))
         self.section_title.setText(title)
         self.section_desc.setText(desc)
 
-        # 显示卡片
         self._show_tools(category)
 
     def _show_tools(self, category):
-        """显示工具卡片"""
+        """显示工具卡片 - 响应式网格"""
         # 清空
-        while self.cards_layout.count():
-            item = self.cards_layout.takeAt(0)
+        while self._cards_layout.count():
+            item = self._cards_layout.takeAt(0)
             widget = item.widget()
             if widget:
                 widget.deleteLater()
 
-        # 添加卡片
         tools = self.tools.get(category, [])
+
+        # 使用 auto-fit 响应式网格
+        # 根据窗口宽度动态调整列数
         for i, tool in enumerate(tools):
             card = ToolCard(
                 name=tool["name"],
@@ -597,7 +605,11 @@ class ToolboxDialog(QDialog):
 
             row = i // 3
             col = i % 3
-            self.cards_layout.addWidget(card, row, col)
+            self._cards_layout.addWidget(card, row, col)
+
+        # 设置列拉伸，让卡片均匀分布
+        for col in range(3):
+            self._cards_layout.setColumnStretch(col, 1)
 
     def _on_tool_clicked(self, tool_name):
         """工具点击"""
