@@ -7,7 +7,7 @@ from PySide6.QtWidgets import (
     QFileDialog, QScrollArea, QGraphicsDropShadowEffect
 )
 from PySide6.QtCore import Qt, QTimer
-from PySide6.QtGui import QFont, QColor, QAction
+from PySide6.QtGui import QFont, QColor, QAction, QMouseEvent
 
 from config_manager import load_config, save_config, load_services, save_services
 from ssh_worker import UploadWorker, RestartWorker, DownloadWorker
@@ -27,6 +27,113 @@ COLORS = {
     "accent": "#0099ff",
     "divider": "#EBE7E0",
 }
+
+
+class WindowTitleBar(QWidget):
+    """自定义标题栏 - Windows 风格按钮"""
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.parent_window = parent
+        self.setFixedHeight(40)
+        self.setStyleSheet(f"background-color: {COLORS['bg']};")
+        self._drag_pos = None
+
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(16, 0, 0, 0)
+        layout.setSpacing(0)
+
+        # 标题
+        title_label = QLabel("一键部署工具")
+        title_label.setStyleSheet(f"""
+            QLabel {{
+                font-size: 13px;
+                font-weight: 500;
+                color: {COLORS["title"]};
+                background: transparent;
+            }}
+        """)
+        layout.addWidget(title_label)
+        layout.addStretch()
+
+        # 按钮样式
+        btn_style = """
+            QPushButton {
+                border: none;
+                background-color: transparent;
+                color: #666666;
+                font-size: 10px;
+                font-family: "Segoe MDL2 Assets", "Segoe UI", sans-serif;
+            }
+            QPushButton:hover {
+                background-color: #E5E5E5;
+            }
+        """
+
+        # 最小化
+        self.btn_minimize = QPushButton("─")
+        self.btn_minimize.setFixedSize(46, 32)
+        self.btn_minimize.setStyleSheet(btn_style)
+        self.btn_minimize.clicked.connect(self._on_minimize)
+        layout.addWidget(self.btn_minimize)
+
+        # 最大化
+        self.btn_maximize = QPushButton("□")
+        self.btn_maximize.setFixedSize(46, 32)
+        self.btn_maximize.setStyleSheet(btn_style)
+        self.btn_maximize.clicked.connect(self._on_maximize)
+        layout.addWidget(self.btn_maximize)
+
+        # 关闭
+        self.btn_close = QPushButton("✕")
+        self.btn_close.setFixedSize(46, 32)
+        self.btn_close.setStyleSheet(f"""
+            QPushButton {{
+                border: none;
+                background-color: transparent;
+                color: #666666;
+                font-size: 10px;
+                font-family: "Segoe MDL2 Assets", "Segoe UI", sans-serif;
+            }}
+            QPushButton:hover {{
+                background-color: #E81123;
+                color: white;
+            }}
+        """)
+        self.btn_close.clicked.connect(self._on_close)
+        layout.addWidget(self.btn_close)
+
+        self._is_maximized = False
+
+    def _on_close(self):
+        if self.parent_window:
+            self.parent_window.close()
+
+    def _on_minimize(self):
+        if self.parent_window:
+            self.parent_window.showMinimized()
+
+    def _on_maximize(self):
+        if self.parent_window:
+            if self._is_maximized:
+                self.parent_window.showNormal()
+                self._is_maximized = False
+            else:
+                self.parent_window.showMaximized()
+                self._is_maximized = True
+
+    def mousePressEvent(self, event: QMouseEvent):
+        if event.button() == Qt.MouseButton.LeftButton and self.parent_window:
+            self._drag_pos = event.globalPosition().toPoint() - self.parent_window.pos()
+
+    def mouseMoveEvent(self, event: QMouseEvent):
+        if self._drag_pos is not None and self.parent_window:
+            self.parent_window.move(event.globalPosition().toPoint() - self._drag_pos)
+
+    def mouseReleaseEvent(self, event: QMouseEvent):
+        self._drag_pos = None
+
+    def mouseDoubleClickEvent(self, event: QMouseEvent):
+        self._on_maximize()
 
 # 通用样式
 INPUT_STYLE = f"""
@@ -103,6 +210,12 @@ BTN_SECONDARY = f"""
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
+        # 无边框窗口
+        self.setWindowFlags(
+            Qt.WindowType.FramelessWindowHint |
+            Qt.WindowType.Window
+        )
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
         self.setWindowTitle("一键部署工具")
         self.setMinimumSize(1050, 680)
 
@@ -117,11 +230,39 @@ class MainWindow(QMainWindow):
         self._refresh_service_list()
 
     def _init_ui(self):
+        # 外层布局
+        outer_widget = QWidget()
+        outer_layout = QVBoxLayout(outer_widget)
+        outer_layout.setContentsMargins(10, 10, 10, 10)
+        outer_layout.setSpacing(0)
+
+        # 主容器
+        self._main_container = QWidget()
+        self._main_container.setStyleSheet(f"""
+            background-color: {COLORS['bg']};
+            border-radius: 16px;
+        """)
+        container_layout = QVBoxLayout(self._main_container)
+        container_layout.setContentsMargins(0, 0, 0, 0)
+        container_layout.setSpacing(0)
+
+        # 阴影
+        shadow = QGraphicsDropShadowEffect()
+        shadow.setBlurRadius(30)
+        shadow.setXOffset(0)
+        shadow.setYOffset(4)
+        shadow.setColor(QColor(0, 0, 0, 25))
+        self._main_container.setGraphicsEffect(shadow)
+
+        # 标题栏
+        self._title_bar = WindowTitleBar(self)
+        container_layout.addWidget(self._title_bar)
+
+        # 内容区
         central = QWidget()
         central.setStyleSheet(f"background-color: {COLORS['bg']};")
-        self.setCentralWidget(central)
         main_layout = QHBoxLayout(central)
-        main_layout.setContentsMargins(16, 16, 16, 16)
+        main_layout.setContentsMargins(16, 8, 16, 16)
         main_layout.setSpacing(16)
 
         # ═══════════════════════════════════════════════════════════
@@ -539,6 +680,12 @@ class MainWindow(QMainWindow):
 
         main_layout.addWidget(right, 3)
 
+        container_layout.addWidget(central)
+
+        outer_layout.addWidget(self._main_container)
+
+        self.setCentralWidget(outer_widget)
+
         # 状态栏
         self.statusBar().setStyleSheet(f"""
             QStatusBar {{
@@ -623,6 +770,37 @@ class MainWindow(QMainWindow):
         sql_generator_action = QAction("SQL 生成器", self)
         sql_generator_action.triggered.connect(lambda: SqlGeneratorDialog(self).exec())
         tools_menu.addAction(sql_generator_action)
+
+    def changeEvent(self, event):
+        """窗口状态变化事件"""
+        super().changeEvent(event)
+        if event.type() == event.Type.WindowStateChange:
+            if hasattr(self, '_title_bar') and hasattr(self, '_main_container'):
+                is_max = self.isMaximized()
+
+                if is_max:
+                    self._title_bar._is_maximized = True
+                    self._title_bar.btn_maximize.setText("❐")
+                    self.layout().setContentsMargins(0, 0, 0, 0)
+                    self._main_container.setStyleSheet(f"""
+                        background-color: {COLORS['bg']};
+                        border-radius: 0px;
+                    """)
+                    self._title_bar.setStyleSheet(f"""
+                        background-color: {COLORS['bg']};
+                        border-radius: 0px;
+                    """)
+                else:
+                    self._title_bar._is_maximized = False
+                    self._title_bar.btn_maximize.setText("□")
+                    self.layout().setContentsMargins(10, 10, 10, 10)
+                    self._main_container.setStyleSheet(f"""
+                        background-color: {COLORS['bg']};
+                        border-radius: 16px;
+                    """)
+                    self._title_bar.setStyleSheet(f"""
+                        background-color: {COLORS['bg']};
+                    """)
 
     def _add_service(self):
         """添加新服务"""
